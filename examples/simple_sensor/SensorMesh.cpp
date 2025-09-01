@@ -1,5 +1,13 @@
 #include "SensorMesh.h"
 
+// AJ-SR04M Distance Sensor connected to RAK4631/RAK19007
+// 5v -> RAK VDD
+// GND -> RAK GND
+// RX/Trig -> RAK IO1
+// TX/Echo -> RAK IO2
+const int PIN_DISTANCE_SENSOR_TRIGGER = WB_IO1;
+const int PIN_DISTANCE_SENSOR_ECHO = WB_IO2;
+
 /* ------------------------------ Config -------------------------------- */
 
 #ifndef LORA_FREQ
@@ -170,6 +178,58 @@ static uint8_t putFloat(uint8_t * dest, float value, uint8_t size, uint32_t mult
   return size;
 }
 
+long read_distance_cm() {
+
+  // init pins
+  pinMode(PIN_DISTANCE_SENSOR_TRIGGER, OUTPUT);
+  pinMode(PIN_DISTANCE_SENSOR_ECHO, INPUT);
+
+  // clear signal
+  digitalWrite(PIN_DISTANCE_SENSOR_TRIGGER, LOW);
+  delayMicroseconds(5);
+
+  // trigger distance read
+  digitalWrite(PIN_DISTANCE_SENSOR_TRIGGER, HIGH);
+  delayMicroseconds(15);
+  digitalWrite(PIN_DISTANCE_SENSOR_TRIGGER, LOW);
+
+  // get distance reading, waiting a maximum of 50ms for response
+  long duration = pulseIn(PIN_DISTANCE_SENSOR_ECHO, HIGH, 50000);
+  long distance = duration * 0.0343 / 2;
+
+  // ensure distance is within expected bounds
+  if(distance <= 20 || distance >= 450){
+    return -1;
+  }
+
+  return distance;
+
+}
+
+long read_distance_cm_multi() {
+
+  // perform multiple readings
+  long sum = 0;
+  int totalReadingsCount = 0;
+  for(int i = 0; i < 3; i++){
+    long distance = read_distance_cm();
+    if(distance != -1){
+      sum += distance;
+      totalReadingsCount++;
+    }
+    delay(100);
+  }
+
+  // check if no valid readings
+  if(totalReadingsCount == 0){
+    return -1;
+  }
+
+  // average of valid readings
+  return sum / totalReadingsCount;
+
+}
+
 uint8_t SensorMesh::handleRequest(uint8_t perms, uint32_t sender_timestamp, uint8_t req_type, uint8_t* payload, size_t payload_len) {
   memcpy(reply_data, &sender_timestamp, 4);   // reflect sender_timestamp back in response packet (kind of like a 'tag')
 
@@ -181,6 +241,9 @@ uint8_t SensorMesh::handleRequest(uint8_t perms, uint32_t sender_timestamp, uint
     // query other sensors -- target specific
     sensors.querySensors(0xFF & perm_mask, telemetry);  // allow all telemetry permissions for admin or guest
     // TODO: let requester know permissions they have:  telemetry.addPresence(TELEM_CHANNEL_SELF, perms);
+
+    // add custom telemetry
+    telemetry.addGenericSensor(TELEM_CHANNEL_SELF, read_distance_cm_multi());
 
     uint8_t tlen = telemetry.getSize();
     memcpy(&reply_data[4], telemetry.getBuffer(), tlen);
@@ -786,6 +849,15 @@ void SensorMesh::sendSelfAdvertisement(int delay_millis) {
   mesh::Packet* pkt = createSelfAdvert();
   if (pkt) {
     sendFlood(pkt, delay_millis);
+  } else {
+    MESH_DEBUG_PRINTLN("ERROR: unable to create advertisement packet!");
+  }
+}
+
+void SensorMesh::sendZeroHopAdvert(int delay_millis) {
+  mesh::Packet* pkt = createSelfAdvert();
+  if (pkt) {
+    sendZeroHop(pkt, delay_millis);
   } else {
     MESH_DEBUG_PRINTLN("ERROR: unable to create advertisement packet!");
   }

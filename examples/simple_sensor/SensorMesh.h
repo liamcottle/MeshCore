@@ -61,6 +61,7 @@ public:
   void savePrefs() override { _cli.savePrefs(_fs); }
   bool formatFileSystem() override;
   void sendSelfAdvertisement(int delay_millis) override;
+  void sendZeroHopAdvert(int delay_millis);
   void updateAdvertTimer() override;
   void updateFloodAdvertTimer() override;
   void setLoggingOn(bool enable) override {  }
