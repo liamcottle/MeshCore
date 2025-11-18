@@ -1,4 +1,5 @@
 #include "SensorMesh.h"
+#include <algorithm>
 
 // AJ-SR04M Distance Sensor connected to RAK4631/RAK19007
 // 5v -> RAK VDD
@@ -209,12 +210,12 @@ long read_distance_cm() {
 long read_distance_cm_multi() {
 
   // perform multiple readings
-  long sum = 0;
+  long readings[5];
   int totalReadingsCount = 0;
-  for(int i = 0; i < 3; i++){
+  for(int i = 0; i < 5; i++){
     long distance = read_distance_cm();
     if(distance != -1){
-      sum += distance;
+      readings[totalReadingsCount] = distance;
       totalReadingsCount++;
     }
     delay(100);
@@ -225,8 +226,20 @@ long read_distance_cm_multi() {
     return -1;
   }
 
-  // average of valid readings
-  return sum / totalReadingsCount;
+  // sort readings
+  std::sort(readings, readings + totalReadingsCount);
+
+  // return median
+  if(totalReadingsCount == 1){
+    // return only reading
+    return readings[0];
+  } else if(totalReadingsCount == 2){
+    // return midpoint of 2 readings
+    return (readings[0] + readings[1]) / 2;
+  } else { // count >= 3
+    // return 1 reading from the middle
+    return readings[totalReadingsCount / 2];
+  }
 
 }
 
