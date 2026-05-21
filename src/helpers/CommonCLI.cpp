@@ -89,7 +89,8 @@ void CommonCLI::loadPrefsInt(FILESYSTEM* fs, const char* filename) {
     file.read((uint8_t *)&_prefs->adc_multiplier, sizeof(_prefs->adc_multiplier));                 // 166
     file.read((uint8_t *)_prefs->owner_info, sizeof(_prefs->owner_info));                          // 170
     file.read((uint8_t *)&_prefs->rx_boosted_gain, sizeof(_prefs->rx_boosted_gain));              // 290
-    // next: 291
+    file.read((uint8_t *)&_prefs->flood_advert_max_hops, sizeof(_prefs->flood_advert_max_hops));  // 291
+    // next: 292
 
     // sanitise bad pref values
     _prefs->rx_delay_base = constrain(_prefs->rx_delay_base, 0, 20.0f);
@@ -119,6 +120,7 @@ void CommonCLI::loadPrefsInt(FILESYSTEM* fs, const char* filename) {
 
     // sanitise settings
     _prefs->rx_boosted_gain = constrain(_prefs->rx_boosted_gain, 0, 1); // boolean
+    _prefs->flood_advert_max_hops = constrain(_prefs->flood_advert_max_hops, 0, 63);
 
     file.close();
   }
@@ -180,7 +182,8 @@ void CommonCLI::savePrefs(FILESYSTEM* fs) {
     file.write((uint8_t *)&_prefs->adc_multiplier, sizeof(_prefs->adc_multiplier));                 // 166
     file.write((uint8_t *)_prefs->owner_info, sizeof(_prefs->owner_info));                          // 170
     file.write((uint8_t *)&_prefs->rx_boosted_gain, sizeof(_prefs->rx_boosted_gain));              // 290
-    // next: 291
+    file.write((uint8_t *)&_prefs->flood_advert_max_hops, sizeof(_prefs->flood_advert_max_hops));  // 291
+    // next: 292
 
     file.close();
   }
@@ -198,12 +201,15 @@ void CommonCLI::savePrefs() {
 uint8_t CommonCLI::buildAdvertData(uint8_t node_type, uint8_t* app_data) {
   if (_prefs->advert_loc_policy == ADVERT_LOC_NONE) {
     AdvertDataBuilder builder(node_type, _prefs->node_name);
+    builder.setMaxHops(_prefs->flood_advert_max_hops);
     return builder.encodeTo(app_data);
   } else if (_prefs->advert_loc_policy == ADVERT_LOC_SHARE) {
     AdvertDataBuilder builder(node_type, _prefs->node_name, _sensors->node_lat, _sensors->node_lon);
+    builder.setMaxHops(_prefs->flood_advert_max_hops);
     return builder.encodeTo(app_data);
   } else {
     AdvertDataBuilder builder(node_type, _prefs->node_name, _prefs->node_lat, _prefs->node_lon);
+    builder.setMaxHops(_prefs->flood_advert_max_hops);
     return builder.encodeTo(app_data);
   }
 }
@@ -498,6 +504,15 @@ void CommonCLI::handleSetCmd(uint32_t sender_timestamp, char* command, char* rep
     _prefs->allow_read_only = memcmp(&config[16], "on", 2) == 0;
     savePrefs();
     strcpy(reply, "OK");
+  } else if (memcmp(config, "flood.advert.max.hops ", 22) == 0) {
+    int max_hops = _atoi(&config[22]);
+    if (max_hops >= 0 && max_hops <= 63) {
+      _prefs->flood_advert_max_hops = (uint8_t)(max_hops);
+      savePrefs();
+      strcpy(reply, "OK");
+    } else {
+      strcpy(reply, "Error: range is 0-63");
+    }
   } else if (memcmp(config, "flood.advert.interval ", 22) == 0) {
     int hours = _atoi(&config[22]);
     if ((hours > 0 && hours < 3) || (hours > 168)) {
@@ -750,6 +765,8 @@ void CommonCLI::handleGetCmd(uint32_t sender_timestamp, char* command, char* rep
     sprintf(reply, "> %d", (uint32_t) _prefs->multi_acks);
   } else if (memcmp(config, "allow.read.only", 15) == 0) {
     sprintf(reply, "> %s", _prefs->allow_read_only ? "on" : "off");
+  } else if (memcmp(config, "flood.advert.max.hops", 21) == 0) {
+    sprintf(reply, "> %d", ((uint32_t) _prefs->flood_advert_max_hops));
   } else if (memcmp(config, "flood.advert.interval", 21) == 0) {
     sprintf(reply, "> %d", ((uint32_t) _prefs->flood_advert_interval));
   } else if (memcmp(config, "advert.interval", 15) == 0) {

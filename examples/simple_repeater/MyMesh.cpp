@@ -887,6 +887,7 @@ MyMesh::MyMesh(mesh::MainBoard &board, mesh::Radio &radio, mesh::MillisecondCloc
   _prefs.flood_advert_interval = 12; // 12 hours
   _prefs.flood_max = 64;
   _prefs.interference_threshold = 0; // disabled
+  _prefs.flood_advert_max_hops = 5; // default max hops for self flood adverts
 
   // bridge defaults
   _prefs.bridge_enabled = 1;    // enabled

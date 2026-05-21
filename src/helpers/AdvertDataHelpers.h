@@ -32,6 +32,14 @@ public:
   void setFeat1(uint16_t extra) { _extra1 = extra; }
   void setFeat2(uint16_t extra) { _extra2 = extra; }
 
+  void setMaxHops(uint8_t maxHops) {
+    // 0 means unlimited hops, not zero hops
+    // so don't waste 2-bytes adding flag if no limit set
+    if(maxHops > 0 && maxHops <= 63){
+      setFeat1(maxHops);
+    }
+  }
+
   /**
    * \brief  encode the given advertisement data.
    * \param app_data  dest array, must be MAX_ADVERT_DATA_SIZE
@@ -54,6 +62,7 @@ public:
   uint8_t getType() const { return _flags & 0x0F; }
   uint16_t getFeat1() const { return _extra1; }
   uint16_t getFeat2() const { return _extra2; }
+  uint16_t getMaxHops() const { return _extra1 & 63; }
 
   bool hasName() const { return _name[0] != 0; }
   const char* getName() const { return _name; }

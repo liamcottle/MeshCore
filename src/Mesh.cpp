@@ -1,4 +1,5 @@
 #include "Mesh.h"
+#include "helpers/AdvertDataHelpers.h"
 //#include <Arduino.h>
 
 namespace mesh {
@@ -268,7 +269,16 @@ DispatcherAction Mesh::onRecvPacket(Packet* pkt) {
         if (is_ok) {
           MESH_DEBUG_PRINTLN("%s Mesh::onRecvPacket(): valid advertisement received!", getLogDateTime());
           onAdvertRecv(pkt, id, timestamp, app_data, app_data_len);
-          action = routeRecvPacket(pkt);
+          
+          // check if advert reached max hops
+          AdvertDataParser parser(app_data, app_data_len);
+          if (parser.isValid() && parser.getMaxHops() > 0 && pkt->getPathHashCount() >= parser.getMaxHops()) {
+            MESH_DEBUG_PRINTLN("%s Mesh::onRecvPacket(): advert reached max_hops=%d", getLogDateTime(), parser.getMaxHops());
+            action = ACTION_RELEASE; // don't allow forwarding
+          } else {
+            action = routeRecvPacket(pkt);
+          }
+
         } else {
           MESH_DEBUG_PRINTLN("%s Mesh::onRecvPacket(): received advertisement with forged signature! (app_data_len=%d)", getLogDateTime(), app_data_len);
         }
