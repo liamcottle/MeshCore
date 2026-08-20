@@ -62,6 +62,7 @@
 #define CMD_SET_DEFAULT_FLOOD_SCOPE   63
 #define CMD_GET_DEFAULT_FLOOD_SCOPE   64
 #define CMD_SEND_RAW_PACKET           65
+#define CMD_PLAY_RTTTL                66
 
 // Stats sub-types for CMD_GET_STATS
 #define STATS_TYPE_CORE               0
@@ -2011,6 +2012,30 @@ void MyMesh::handleCmdFrame(size_t len) {
     } else {
       writeErrFrame(ERR_CODE_TABLE_FULL);
     }
+  } else if (cmd_frame[0] == CMD_PLAY_RTTTL && len >= 3) {
+    #ifdef PIN_BUZZER
+    // 0 = respect buzzer prefs, 1 = force play
+    bool force_play = cmd_frame[1] == 1;
+    // read length prefixed melody string
+    uint8_t melody_len = cmd_frame[2];
+    char melody[255];
+    memcpy(melody, &cmd_frame[3], melody_len);
+    melody[melody_len] = 0; // melody must be null terminated
+    // play melody
+    GenericBuzzer buzzer;
+    buzzer.begin();
+    buzzer.quiet(force_play ? false : _prefs.buzzer_quiet);
+    buzzer.play(melody);
+    // buzzer.loop() is already called in UITask::loop() on another instance in a non-blocking way
+    // however we will block here as we want to restore the buzzer quiet preference after the melody is done
+    while(buzzer.isPlaying()){
+      buzzer.loop();
+    }
+    buzzer.quiet(_prefs.buzzer_quiet); // restore buzzer quiet preference
+    writeOKFrame();
+    #else
+    writeErrFrame(ERR_CODE_UNSUPPORTED_CMD);
+    #endif
   } else {
     writeErrFrame(ERR_CODE_UNSUPPORTED_CMD);
     MESH_DEBUG_PRINTLN("ERROR: unknown command: %02X", cmd_frame[0]);
