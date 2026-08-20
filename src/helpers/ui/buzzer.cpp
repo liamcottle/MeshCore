@@ -2,7 +2,7 @@
 #ifdef PIN_BUZZER
 #include "buzzer.h"
 
-void genericBuzzer::begin() {
+void GenericBuzzer::begin() {
 //    Serial.print("DBG: Setting up buzzer on pin ");
 //    Serial.println(PIN_BUZZER);
     #ifdef PIN_BUZZER_EN
@@ -15,7 +15,7 @@ void genericBuzzer::begin() {
     digitalWrite(PIN_BUZZER, LOW); // need to pull low by default to avoid extreme power draw
 }
 
-void genericBuzzer::play(const char *melody) {
+void GenericBuzzer::play(const char *melody) {
     if (isPlaying())   // interrupt existing
     {
         rtttl::stop();
@@ -28,23 +28,23 @@ void genericBuzzer::play(const char *melody) {
 //    Serial.println(isQuiet());
 }
 
-bool genericBuzzer::isPlaying() {
+bool GenericBuzzer::isPlaying() {
     return rtttl::isPlaying();
 }
 
-void genericBuzzer::loop() {
+void GenericBuzzer::loop() {
     if (!rtttl::done()) rtttl::play();
 }
 
-void genericBuzzer::startup() {
+void GenericBuzzer::startup() {
     play(startup_song);
 }
 
-void genericBuzzer::shutdown() {
+void GenericBuzzer::shutdown() {
     play(shutdown_song);
 }
 
-void genericBuzzer::quiet(bool buzzer_state) {
+void GenericBuzzer::quiet(bool buzzer_state) {
     _is_quiet = buzzer_state;
 #ifdef PIN_BUZZER_EN
     if (_is_quiet) {
@@ -55,7 +55,7 @@ void genericBuzzer::quiet(bool buzzer_state) {
 #endif
 }
 
-bool genericBuzzer::isQuiet() {
+bool GenericBuzzer::isQuiet() {
     return _is_quiet;
 }
 

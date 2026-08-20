@@ -16,7 +16,7 @@
 
 */
 
-class genericBuzzer
+class GenericBuzzer
 {
     public:
         void begin();  // set up buzzer port

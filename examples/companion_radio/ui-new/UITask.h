@@ -26,7 +26,7 @@ class UITask : public AbstractUITask {
   DisplayDriver* _display;
   SensorManager* _sensors;
 #ifdef PIN_BUZZER
-  genericBuzzer buzzer;
+  GenericBuzzer buzzer;
 #endif
 #ifdef PIN_VIBRATION
   GenericVibration vibration;

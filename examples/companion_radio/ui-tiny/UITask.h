@@ -30,7 +30,7 @@ class UITask : public AbstractUITask {
   SensorManager* _sensors;
   ScrollingStatusBar _statusBar;
 #ifdef PIN_BUZZER
-  genericBuzzer buzzer;
+  GenericBuzzer buzzer;
 #endif
 #ifdef PIN_VIBRATION
   GenericVibration vibration;
