@@ -57,7 +57,10 @@ public:
   virtual bool getBootloaderVersion(char* version, size_t max_len) override;
   virtual bool startOTAUpdate(const char *id, char reply[]) override;
   virtual void sleep(uint32_t secs) override;
+  virtual void loop() override;
   bool isExternalPowered() override;
+  void initWatchdogTimer(uint32_t timeout_ms);
+  void feedWatchdogTimer();
 
   void attachDynamicPrefs(KeyValueStore* prefs) { }  // no-op
 

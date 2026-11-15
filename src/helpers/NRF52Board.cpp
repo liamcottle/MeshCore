@@ -4,6 +4,7 @@
 
 #include <bluefruit.h>
 #include <nrf_soc.h>
+#include <nrf_wdt.h>
 
 #ifdef USE_CC310_HW_CRYPTO
 #include <Adafruit_nRFCrypto.h>
@@ -26,10 +27,43 @@ static void disconnect_callback(uint16_t conn_handle, uint8_t reason) {
 void NRF52Board::begin() {
   startup_reason = BD_STARTUP_NORMAL;
 
+  // init watchdog timer
+  #if defined(WATCHDOG_TIMER_SECONDS) && WATCHDOG_TIMER_SECONDS > 0
+  initWatchdogTimer(WATCHDOG_TIMER_SECONDS);
+  #endif
+
   #ifdef USE_CC310_HW_CRYPTO
     // CC310 TRNG is higher quality and environment-independent vs radio RSSI noise.
     nRFCrypto.begin();
   #endif
+}
+
+void NRF52Board::loop() {
+  #ifdef WATCHDOG_TIMER_SECONDS
+  feedWatchdogTimer();
+  #endif
+}
+
+void NRF52Board::initWatchdogTimer(uint32_t timeout_seconds) {
+  
+  // convert seconds to 32.768 kHz ticks
+  uint32_t ticks = (uint32_t)timeout_seconds * 32768UL;
+
+  // init watchdog
+  nrf_wdt_behaviour_set(NRF_WDT, NRF_WDT_BEHAVIOUR_PAUSE_SLEEP_HALT);
+  nrf_wdt_reload_value_set(NRF_WDT, ticks);
+  nrf_wdt_reload_request_enable(NRF_WDT, NRF_WDT_RR0);
+
+  // start watchdog
+  nrf_wdt_task_trigger(NRF_WDT, NRF_WDT_TASK_START);
+
+  // initial feed
+  feedWatchdogTimer();
+
+}
+
+void NRF52Board::feedWatchdogTimer() {
+  nrf_wdt_reload_request_set(NRF_WDT, NRF_WDT_RR0);
 }
 
 #ifdef NRF52_POWER_MANAGEMENT
